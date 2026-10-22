@@ -12,14 +12,15 @@ from statement_parser.data.models.enums.statuses import FileType, JobSource, Job
 class Job(IdMixin, TimestampMixin, Base):
     __tablename__ = "jobs"
     __table_args__ = (
-        UniqueConstraint("client_id", "account_number_hash"),
-        Index("ix_accounts_client_user_id", "client_id", "client_user_id"),
+        UniqueConstraint("client_id", "idempotency_key"),
+        Index("ix_jobs_client_file_hash", "client_id", "file_hash"),
     )
+
     client_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("api_clients.id"), index=True)
     client_user_id: Mapped[str] = mapped_column(String(100))
-    input_source: Mapped[str] = mapped_column(enum_column(JobSource))
+    input_source: Mapped[JobSource] = mapped_column(enum_column(JobSource))
     file_hash: Mapped[str | None] = mapped_column(String(64))
-    file_type: Mapped[str | None] = mapped_column(enum_column(FileType))
+    file_type: Mapped[FileType | None] = mapped_column(enum_column(FileType))
     idempotency_key: Mapped[str] = mapped_column(String(100))
     status: Mapped[JobStatus] = mapped_column(
         enum_column(JobStatus), default=JobStatus.QUEUED, index=True
@@ -27,4 +28,4 @@ class Job(IdMixin, TimestampMixin, Base):
     current_step: Mapped[str | None] = mapped_column(String(30))
     error_code: Mapped[str | None] = mapped_column(String(50))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    delete_after: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
