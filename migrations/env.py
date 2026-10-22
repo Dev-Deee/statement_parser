@@ -1,9 +1,8 @@
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
 from alembic import context
+from sqlalchemy import engine_from_config, pool
+
 from statement_parser.config.settings import settings
 from statement_parser.data.models import Base
 
@@ -72,7 +71,6 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
-
         )
 
         with context.begin_transaction():
