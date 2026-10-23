@@ -1,8 +1,8 @@
-"""create api_clients jobs accounts
+"""initial schema
 
-Revision ID: 2d6c2d8532a5
+Revision ID: 0c4007ecfe2e
 Revises: 
-Create Date: 2026-10-21 04:41:36.576202
+Create Date: 2026-10-22 03:44:24.211776
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '2d6c2d8532a5'
+revision: str = '0c4007ecfe2e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -26,54 +26,54 @@ def upgrade() -> None:
     sa.Column('api_key_hash', sa.String(length=64), nullable=False),
     sa.Column('api_key_prefix', sa.String(length=64), nullable=False),
     sa.Column('webhook_url', sa.String(length=500), nullable=True),
-    sa.Column('webhook_secret_encoded', sa.LargeBinary(), nullable=True),
-    sa.Column('fingerprint_key_encoded', sa.LargeBinary(), nullable=True),
+    sa.Column('webhook_signing_secret_encrypted', sa.LargeBinary(), nullable=True),
+    sa.Column('hashing_secret_encrypted', sa.LargeBinary(), nullable=False),
     sa.Column('status', sa.Enum('active', 'suspended', name='clientstatus', native_enum=False, length=20), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('name')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_api_clients')),
+    sa.UniqueConstraint('name', name=op.f('uq_api_clients_name'))
     )
     op.create_index(op.f('ix_api_clients_api_key_hash'), 'api_clients', ['api_key_hash'], unique=True)
     op.create_table('accounts',
     sa.Column('client_id', sa.Uuid(), nullable=False),
-    sa.Column('external_ref', sa.String(length=100), nullable=False),
+    sa.Column('client_user_id', sa.String(length=100), nullable=False),
     sa.Column('bank_code', sa.String(length=20), nullable=False),
-    sa.Column('account_fingerprint', sa.String(length=64), nullable=False),
-    sa.Column('account_number_masked', sa.String(length=20), nullable=False),
+    sa.Column('account_number_hash', sa.String(length=64), nullable=False),
+    sa.Column('masked_account_number', sa.String(length=20), nullable=False),
     sa.Column('account_name', sa.String(length=200), nullable=True),
     sa.Column('currency', sa.String(length=3), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['client_id'], ['api_clients.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('client_id', 'account_fingerprint')
+    sa.ForeignKeyConstraint(['client_id'], ['api_clients.id'], name=op.f('fk_accounts_client_id_api_clients')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_accounts')),
+    sa.UniqueConstraint('client_id', 'account_number_hash', name=op.f('uq_accounts_client_id_account_number_hash'))
     )
-    op.create_index('ix_accounts_client_external_ref', 'accounts', ['client_id', 'external_ref'], unique=False)
+    op.create_index('ix_accounts_client_user_id', 'accounts', ['client_id', 'client_user_id'], unique=False)
     op.create_table('jobs',
     sa.Column('client_id', sa.Uuid(), nullable=False),
-    sa.Column('external_reference', sa.String(length=100), nullable=False),
-    sa.Column('source', sa.Enum('upload', 'mono', name='jobsource', native_enum=False, length=20), nullable=False),
+    sa.Column('client_user_id', sa.String(length=100), nullable=False),
+    sa.Column('input_source', sa.Enum('upload', 'mono', name='jobsource', native_enum=False, length=20), nullable=False),
     sa.Column('file_hash', sa.String(length=64), nullable=True),
     sa.Column('file_type', sa.Enum('pdf', 'csv', 'xlsx', name='filetype', native_enum=False, length=20), nullable=True),
     sa.Column('idempotency_key', sa.String(length=100), nullable=False),
     sa.Column('status', sa.Enum('queued', 'processing', 'completed', 'needs_review', 'failed', name='jobstatus', native_enum=False, length=20), nullable=False),
-    sa.Column('stage', sa.String(length=30), nullable=True),
+    sa.Column('current_step', sa.String(length=30), nullable=True),
     sa.Column('error_code', sa.String(length=50), nullable=True),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('delete_after', sa.DateTime(timezone=True), nullable=False),
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['client_id'], ['api_clients.id'], ),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('client_id', 'idempotency_key')
+    sa.ForeignKeyConstraint(['client_id'], ['api_clients.id'], name=op.f('fk_jobs_client_id_api_clients')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_jobs')),
+    sa.UniqueConstraint('client_id', 'idempotency_key', name=op.f('uq_jobs_client_id_idempotency_key'))
     )
-    op.create_index('ix_jobs_client_fie_hash', 'jobs', ['client_id', 'file_hash'], unique=False)
+    op.create_index('ix_jobs_client_file_hash', 'jobs', ['client_id', 'file_hash'], unique=False)
     op.create_index(op.f('ix_jobs_client_id'), 'jobs', ['client_id'], unique=False)
-    op.create_index(op.f('ix_jobs_expires_at'), 'jobs', ['expires_at'], unique=False)
+    op.create_index(op.f('ix_jobs_delete_after'), 'jobs', ['delete_after'], unique=False)
     op.create_index(op.f('ix_jobs_status'), 'jobs', ['status'], unique=False)
     # ### end Alembic commands ###
 
@@ -82,11 +82,11 @@ def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_index(op.f('ix_jobs_status'), table_name='jobs')
-    op.drop_index(op.f('ix_jobs_expires_at'), table_name='jobs')
+    op.drop_index(op.f('ix_jobs_delete_after'), table_name='jobs')
     op.drop_index(op.f('ix_jobs_client_id'), table_name='jobs')
-    op.drop_index('ix_jobs_client_fie_hash', table_name='jobs')
+    op.drop_index('ix_jobs_client_file_hash', table_name='jobs')
     op.drop_table('jobs')
-    op.drop_index('ix_accounts_client_external_ref', table_name='accounts')
+    op.drop_index('ix_accounts_client_user_id', table_name='accounts')
     op.drop_table('accounts')
     op.drop_index(op.f('ix_api_clients_api_key_hash'), table_name='api_clients')
     op.drop_table('api_clients')
