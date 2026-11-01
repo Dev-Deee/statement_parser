@@ -12,7 +12,7 @@ class Category(TimestampMixin, Base):
     code: Mapped[str] = mapped_column(String(50), primary_key=True)
     name: Mapped[str] = mapped_column(String(100))
     parent_code: Mapped[str | None] = mapped_column(ForeignKey("categories.code"))
-    Category_type: Mapped[CategoryType] = mapped_column(enum_column(CategoryType))
+    category_type: Mapped[CategoryType] = mapped_column(enum_column(CategoryType))
 
 
 class CategoryRule(IdMixin, TimestampMixin, Base):
