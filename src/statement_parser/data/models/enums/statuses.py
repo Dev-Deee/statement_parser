@@ -45,6 +45,8 @@ class BalanceCheckStatus(StrEnum):
 class MismatchType(StrEnum):
     RUNNING_BALANCE = "running_balance"
     CLOSING_TOTAL = "closing_total"
+    TRANSACTION_COUNT = "transaction_count"
+    HEADER_TOTAL = "header_total"
 
 
 class Channel(StrEnum):
